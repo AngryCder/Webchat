@@ -34,40 +34,54 @@ class server():
              self.Incoming_request_socket_array.append(sock)
              self.Incoming_request_address_array.append(addr)
 
+
 class Aud_Vid():
 
-    def __init__(self, arg):
+    def __init__(self):
         self.video = cv2.VideoCapture(0)
         self.CHUNK = 1470
         self.FORMAT = pyaudio.paInt16
-        self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self.out = cv2.VideoWriter('output.avi', self.fourcc, 30.0, (640, 480))
         self.CHANNELS = 2
         self.RATE = 44100
         self.audio = pyaudio.PyAudio()
         self.instream = self.audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK)
         self.outstream = self.audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,output=True,frames_per_buffer=self.CHUNK)
-        self.arg = arg
-        self.p2 = th.Thread(target=self.rec)
-        self.p3 = th.Thread(target=self.vid)
         self.audvid_s = {"aud":None,"vid":None}
         self.sendav = pickle.dumps(self.audvid_s)
         self.audvid_r = {"aud":None,"vid":None}
 
 
-    def rec(self):
+    def aud_rec(self):
             self.audvid_s["aud"] = self.instream.read(self.CHUNK)
 
-    def vid(self):
+    def vid_rec(self):
             ret,self.audvid_s["vid"] = self.video.read()
 
-    def play_rec(self):
-        p1 = th.Thread(target=self.rec)
-        p2 = th.Thread(target=self.vid)
+    def av_rec(self):
+        p1 = th.Thread(target=self.aud_rec)
+        p2 = th.Thread(target=self.vid_rec)
         p2.start()
         p1.start()
         p2.join()
         p1.join()
+
+    def av_play(self,data):
+        p1 = th.Thread(target=self.aud_play,args = (data))
+        p2 = th.Thread(target=self.vid_play,args = (data))
+        p2.start()
+        p1.start()
+        p2.join()
+        p1.join()
+
+
+    def vid_play(self,data):
+        cv2.imshow('client', data['vid'])
+        key = cv2.waitKey(10) & 0XFF
+
+
+    def aud_play(self,data):
+        self.outstream.write(data['aud'])
+
 
 class GUI(server,Aud_Vid):
 
