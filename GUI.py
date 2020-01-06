@@ -2,7 +2,7 @@ import socket
 import ssl
 import cv2
 from PIL import Image,ImageTk
-from moviepy.editor import *
+import concurrent.futures
 import pickle
 import wave
 import pyaudio
@@ -46,41 +46,15 @@ class Aud_Vid():
         self.audio = pyaudio.PyAudio()
         self.instream = self.audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK)
         self.outstream = self.audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,output=True,frames_per_buffer=self.CHUNK)
-        self.audvid_s = {"aud":None,"vid":None}
-        self.sendav = pickle.dumps(self.audvid_s)
-        self.audvid_r = {"aud":None,"vid":None}
+    
+    def sync(self):
+         with concurrent.futures.ThreadPoolExecutor() as executor:
+                 tv = executor.submit(self.video.read)
+                 ta = executor.submit(self.instream.read,1470)
+                 vid = tv.result()
+                 aud = ta.result()
+                 return(vid,aud)
 
-
-    def aud_rec(self):
-            self.audvid_s["aud"] = self.instream.read(self.CHUNK)
-
-    def vid_rec(self):
-            ret,self.audvid_s["vid"] = self.video.read()
-
-    def av_rec(self):
-        p1 = th.Thread(target=self.aud_rec)
-        p2 = th.Thread(target=self.vid_rec)
-        p2.start()
-        p1.start()
-        p2.join()
-        p1.join()
-
-    def av_play(self,data):
-        p1 = th.Thread(target=self.aud_play,args = (data))
-        p2 = th.Thread(target=self.vid_play,args = (data))
-        p2.start()
-        p1.start()
-        p2.join()
-        p1.join()
-
-
-    def vid_play(self,data):
-        cv2.imshow('client', data['vid'])
-        key = cv2.waitKey(10) & 0XFF
-
-
-    def aud_play(self,data):
-        self.outstream.write(data['aud'])
 
 
 class GUI(server,Aud_Vid):
