@@ -116,13 +116,6 @@ class GUI(server,Aud_Vid):
         self.ImageRecv.configure(image = ima)
         self.ImageRecv.image = ima
 
-    def play_recv(self,frames,aud):
-        p1 = th.Thread(target=self.show_recv,args=(frame))
-        p2 = th.Thread(target=self.avi.outstream.write,args=(aud))
-        p2.start()
-        p1.start()
-        p2.join()
-        p1.join()
 
     def make_call(self):
        ip_address = self.ip_enter.get()
@@ -175,19 +168,18 @@ class GUI(server,Aud_Vid):
 
 
     def lift_call(self,sock):
-        while True :
             try:
-               psend = th.Thread(target=send,args=sock)
-               precv = th.Thread(target=recived,arg=sock)
-               psend.start()
-               precv.start()
-               psend.join()
-               precv.join()
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                        send = executor.submit(sock.sendall,data)
+                        rec_v = executor.submit(seck.recv,1024)
+                        sn = send.result()
+                        rc = rec_v.result()
+                        return rc
+
 
 
             except socket.timeout :
                 error_indicator = "call timed out"
-
 
 
 if __name__ == '__main__':
