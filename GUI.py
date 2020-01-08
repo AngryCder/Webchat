@@ -135,22 +135,20 @@ class GUI(server,Aud_Vid):
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()
 
-    def send(self):
-          try:
-            self.avi.play_rec()
-            serialized_img = pickle.dumps(self.audvid_s)
-            sock.sendall(serialized_img)
-          except:
-              error_indicator = ""
+    def send(self,sock,data):
+        sock.sendall(pickle.dumps(data))
 
-    def recived(self,sock):
-            serialized_data = b""
-            while True:
-                packet = sock.recv(1024)
-                if not packet:
-                    break
-            data = pickle.loads(serialized_data)
-            play_recv(data['vid'],data["aud"])
+
+    def recived(self,sock,buffer):
+        ser_data = buffer
+        packet = sock.recv(4096)
+        ser_data += packet
+        try:
+           data = pickle.loads(ser_data)
+        except:
+           return(self.recived(sock,ser_data))
+        else:
+            return(pickle.loads(ser_data))
 
 
     def cascade(self):
@@ -175,8 +173,6 @@ class GUI(server,Aud_Vid):
                         sn = send.result()
                         rc = rec_v.result()
                         return rc
-
-
 
             except socket.timeout :
                 error_indicator = "call timed out"
