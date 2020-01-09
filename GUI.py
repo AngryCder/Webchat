@@ -2,7 +2,7 @@ import socket
 import ssl
 import cv2
 from PIL import Image,ImageTk
-import concurrent.futures
+from moviepy.editor import *
 import pickle
 import wave
 import pyaudio
@@ -16,28 +16,28 @@ class server():
         self.arg = arg
         self.Local_Server_incoming = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.Local_Server_outgoing = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.Incoming_request_address_array = []
-        self.Incoming_request_socket_array =[]
+        self.Incoming_request_socket_array = None
+        self.Incoming_request_address_array = None
 
 
-    def create_server(self,address_in,address_out):
+
+    def create_server(self,address_in):
         self.Local_Server_incoming.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.Local_Server_outgoing.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.Local_Server_incoming.bind(address_in)
-        self.Local_Server_outgoing.bind(address_out)
-        self.Local_Server_incoming.listen(5)
+        self.Local_Server_incoming.listen(1)
 
     def connector(self):
          print("wiat")
          while True:
-             addr , sock = self.Local_Server_incoming.accept()
-             self.Incoming_request_socket_array.append(sock)
-             self.Incoming_request_address_array.append(addr)
-
+             sock,addr = self.Local_Server_incoming.accept()
+             print(addr)
+             self.Incoming_request_socket = sock
+             self.Incoming_request_address = addr
 
 class Aud_Vid():
 
-    def __init__(self):
+    def __init__(self, arg):
         self.video = cv2.VideoCapture(0)
         self.CHUNK = 1470
         self.FORMAT = pyaudio.paInt16
@@ -46,14 +46,15 @@ class Aud_Vid():
         self.audio = pyaudio.PyAudio()
         self.instream = self.audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK)
         self.outstream = self.audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,output=True,frames_per_buffer=self.CHUNK)
-    
+
+
     def sync(self):
-         with concurrent.futures.ThreadPoolExecutor() as executor:
-                 tv = executor.submit(self.video.read)
-                 ta = executor.submit(self.instream.read,1470)
-                 vid = tv.result()
-                 aud = ta.result()
-                 return(vid,aud)
+          with concurrent.futures.ThreadPoolExecutor() as executor:
+                  tv = executor.submit(self.video.read)
+                  ta = executor.submit(self.instream.read,1470)
+                  vid = tv.result()
+                  aud = ta.result()
+                  return(vid[1],aud)
 
 
 
@@ -86,9 +87,11 @@ class GUI(server,Aud_Vid):
         self.port_enter = tk.Entry(self.Application_Window)
         self.make_call_button =  tk.Button(self.Application_Window,text = 'make call' ,command = self.make_call)
         self.end_call_button =  tk.Button(self.Application_Window,text = 'end call' ,command = self.end_call)
+        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.lift_call)
         self.ip_enter.grid(row=0, column=1)
         self.port_enter.grid(row=1, column=1)
         self.make_call_button.grid(row=3, column=1)
+        self.lift_call_button.grid(row=3, column=2)
         self.error_label.grid(row=4, column=1)
         self.ImageMain.grid(row=5, column=1)
         self.ImageRecv.grid(row=5,column=3)
@@ -106,7 +109,7 @@ class GUI(server,Aud_Vid):
         ima = ImageTk.PhotoImage(img)
         self.ImageMain.configure(image = ima)
         self.ImageMain.image = ima
-        self.ImageMain.after(10,self.show_picture)
+        self.ImageMain.after(1,self.show_picture)
 
     def show_recv(self,frame):
         pi = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -115,6 +118,15 @@ class GUI(server,Aud_Vid):
         ima = ImageTk.PhotoImage(img)
         self.ImageRecv.configure(image = ima)
         self.ImageRecv.image = ima
+        self.ImageRecv.after(1,self.show_recv)
+
+
+    def play_recv(self,frames,aud):
+       with concurrent.futures.ThreadPoolExecutor() as executor:
+               show = executor.submit(self.show_recv,frames)
+               hear = executor.submit(self.avi.outstream.write,aud)
+               vid = show.result()
+               aud = hear.result()
 
 
     def make_call(self):
@@ -123,9 +135,18 @@ class GUI(server,Aud_Vid):
        ip = (ip_address,port)
        self.server.Local_Server_outgoing.connect(ip)
        print(ip)
-       check = self.server.Local_Server_outgoing.recv(1024)
-       if check == b'alpha':
-              self.lift_call(self.server.Local_Server_outgoing)
+       self.error_indicator =" connected"
+
+
+    def padding(self,arg):
+        a = len(arg)
+        if a == 16:
+            return arg
+        elif a <16:
+            arg =arg + ((b'\x00')*(16-a))
+            return arg
+
+
 
     def end_call(self,sock):
             ind = self.server.Incoming_request_socket_array.index(sock)
@@ -135,52 +156,48 @@ class GUI(server,Aud_Vid):
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()
 
-    def send(self,sock,data):
-        sock.sendall(pickle.dumps(data))
-
+    def send(self,sock):
+        while True:
+           ser_data =pickle.dumps(self.avi.sync())
+           length = self.padding(ser_data)
+           sock.sendall(length)
+           sock.sendall(ser_data)
 
     def recived(self,sock,buffer):
-        ser_data = buffer
-        packet = sock.recv(4096)
-        ser_data += packet
-        try:
+        while True:
+           ser_data = b""
+           ser_len = client_socket.recv(16)
+           length = pickle.loads(ser_len)
+           if length > 0:
+               if length < 4096:
+                   packet = client_socket.recv(length)
+               else:
+                   packet = client_socket.recv(4096)
+
+               ser_data += packet
+               length -= len(packet)
+
            data = pickle.loads(ser_data)
-        except:
-           return(self.recived(sock,ser_data))
-        else:
-            return(pickle.loads(ser_data))
+           play_recv(data)
 
-
-    def cascade(self):
-        if self.para == self.Incoming_request_address_array :
-            pass
-
-        elif self.para != self.Incoming_request_address_array :
-            a = len(self.para)
-            b = len(self.Incoming_request_address_array)
-            if b > a:
-                for i in range(a,b):
-                      self.m3nu.add_command(label = self.Incoming_request_address_array[i][0], command = self.lift_call(self.Incoming_request_address_array[i][0]))
-            elif  a > b :
-                       sel.para =  self.Incoming_request_address_array
-
-
-    def lift_call(self,sock):
+    def comms(self,sock):
             try:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                         send = executor.submit(sock.sendall,data)
                         rec_v = executor.submit(seck.recv,1024)
-                        sn = send.result()
-                        rc = rec_v.result()
-                        return rc
+                        vid = send.result()
+                        aud = rec_v.result()
 
             except socket.timeout :
                 error_indicator = "call timed out"
 
 
+
+
+
 if __name__ == '__main__':
              cli = server("local")
-             cli.create_server(("",80),("",4000))
+             cli.create_server(("",80))
              avi = Aud_Vid("sound and sight")
              app = GUI(cli,avi)
              app.Application_Window.mainloop()
