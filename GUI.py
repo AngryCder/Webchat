@@ -2,7 +2,6 @@ import socket
 import ssl
 import cv2
 from PIL import Image,ImageTk
-from moviepy.editor import *
 import pickle
 import wave
 import pyaudio
