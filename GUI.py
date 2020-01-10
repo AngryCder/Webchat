@@ -86,7 +86,7 @@ class GUI(server,Aud_Vid):
         self.port_enter = tk.Entry(self.Application_Window)
         self.make_call_button =  tk.Button(self.Application_Window,text = 'make call' ,command = self.make_call)
         self.end_call_button =  tk.Button(self.Application_Window,text = 'end call' ,command = self.end_call)
-        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.lift_call)
+        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.comms)
         self.ip_enter.grid(row=0, column=1)
         self.port_enter.grid(row=1, column=1)
         self.make_call_button.grid(row=3, column=1)
@@ -158,7 +158,8 @@ class GUI(server,Aud_Vid):
     def send(self,sock):
         while True:
            ser_data =pickle.dumps(self.avi.sync())
-           length = self.padding(ser_data)
+           length = len(ser_data)
+           length = self.padding(legth)
            sock.sendall(length)
            sock.sendall(ser_data)
 
@@ -167,7 +168,7 @@ class GUI(server,Aud_Vid):
            ser_data = b""
            ser_len = client_socket.recv(16)
            length = pickle.loads(ser_len)
-           if length > 0:
+           while length > 0:
                if length < 4096:
                    packet = client_socket.recv(length)
                else:
