@@ -3,6 +3,7 @@ import ssl
 import cv2
 from PIL import Image,ImageTk
 import pickle
+import concurrent.futures
 import wave
 import pyaudio
 import numpy as np
@@ -134,7 +135,14 @@ class GUI(server,Aud_Vid):
        ip = (ip_address,port)
        self.server.Local_Server_outgoing.connect(ip)
        print(ip)
-       self.error_indicator =" connected"
+       self.error_label.configure(text = ip_address)
+       self.error_label.text = ip_address
+       with concurrent.futures.ThreadPoolExecutor() as executor:
+                signature = executor.submit(self.server.Local_Server_outgoing.recv,8)
+                result = signature.result()
+                if signature == b'alpha' :
+                    self.comms(self.server.Local_Server_outgoing)
+
 
 
     def padding(self,arg):
@@ -147,23 +155,24 @@ class GUI(server,Aud_Vid):
 
 
 
-    def end_call(self,sock):
-            ind = self.server.Incoming_request_socket_array.index(sock)
-            self.m3nu.delete(self.Incoming_request_address_array[ind][0])
-            self.server.Incoming_request_socket_array.pop(ind)
-            self.server.Incoming_request_address_array.pop(ind)
-            sock.shutdown(socket.SHUT_RDWR)
-            sock.close()
+    def end_call(self):
+            self.server.Incoming_request_socket.shutdown(socket.SHUT_RDWR)
+            self.server.Incoming_request_socket.close()
 
     def send(self,sock):
+      try:
         while True:
            ser_data =pickle.dumps(self.avi.sync())
-           length = len(ser_data)
-           length = self.padding(legth)
+           print(ser_data)
+           length = pickle.dumps(len(ser_data))
+           length = self.padding(length)
            sock.sendall(length)
            sock.sendall(ser_data)
 
-    def recived(self,sock,buffer):
+      except Exception as e: print(e)
+
+    def recived(self,sock):
+     try:
         while True:
            ser_data = b""
            ser_len = client_socket.recv(16)
@@ -179,12 +188,13 @@ class GUI(server,Aud_Vid):
 
            data = pickle.loads(ser_data)
            play_recv(data)
+     except Exception as e: print(e)
 
     def comms(self,sock):
             try:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                        send = executor.submit(sock.sendall,data)
-                        rec_v = executor.submit(seck.recv,1024)
+                        send = executor.submit(self.send,sock)
+                        rec_v = executor.submit(self.recived,sock)
                         vid = send.result()
                         aud = rec_v.result()
 
