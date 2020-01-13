@@ -111,14 +111,18 @@ class GUI(server,Aud_Vid):
         self.ImageMain.image = ima
         self.ImageMain.after(1,self.show_picture)
 
-    def show_recv(self,frame):
-        pi = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    def show_recv(self,data):
+        t1 = th.Thread(target= avi.outstream.write,args = (data[1],))
+        t1.start()
+        pi = cv2.cvtColor(data[0], cv2.COLOR_BGR2RGB)
         pic =  cv2.flip(pi,1)
         img = Image.fromarray(pic)
         ima = ImageTk.PhotoImage(img)
         self.ImageRecv.configure(image = ima)
         self.ImageRecv.image = ima
-        self.ImageRecv.after(1,self.show_recv)
+        t1.join()
+        
+
 
 
     def play_recv(self,frames,aud):
