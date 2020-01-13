@@ -123,16 +123,6 @@ class GUI(server,Aud_Vid):
         t1.join()
         
 
-
-
-    def play_recv(self,frames,aud):
-       with concurrent.futures.ThreadPoolExecutor() as executor:
-               show = executor.submit(self.show_recv,frames)
-               hear = executor.submit(self.avi.outstream.write,aud)
-               vid = show.result()
-               aud = hear.result()
-
-
     def make_call(self):
        ip_address = self.ip_enter.get()
        port =int(self.port_enter.get())
