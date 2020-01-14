@@ -181,7 +181,7 @@ class GUI(server,Aud_Vid):
                length -= len(packet)
 
            data = pickle.loads(ser_data)
-           play_recv(data)
+           self.show_recv(data)
      except Exception as e: print(e)
 
     def comms(self,sock):
