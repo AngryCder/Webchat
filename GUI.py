@@ -16,8 +16,8 @@ class server():
         self.arg = arg
         self.Local_Server_incoming = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.Local_Server_outgoing = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.Incoming_request_socket_array = None
-        self.Incoming_request_address_array = None
+        self.Incoming_request_socket = None
+        self.Incoming_request_address = None
 
 
 
@@ -87,7 +87,7 @@ class GUI(server,Aud_Vid):
         self.port_enter = tk.Entry(self.Application_Window)
         self.make_call_button =  tk.Button(self.Application_Window,text = 'make call' ,command = self.make_call)
         self.end_call_button =  tk.Button(self.Application_Window,text = 'end call' ,command = self.end_call)
-        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.comms)
+        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.lift_call(self.server.Incoming_request_socket))
         self.ip_enter.grid(row=0, column=1)
         self.port_enter.grid(row=1, column=1)
         self.make_call_button.grid(row=3, column=1)
@@ -121,7 +121,6 @@ class GUI(server,Aud_Vid):
         self.ImageRecv.configure(image = ima)
         self.ImageRecv.image = ima
         t1.join()
-        
 
     def make_call(self):
        ip_address = self.ip_enter.get()
@@ -194,6 +193,13 @@ class GUI(server,Aud_Vid):
 
             except socket.timeout :
                 error_indicator = "call timed out"
+
+    def lift_call(self,sock):
+        try:
+            sock.sendall(b'alpha')
+            self.comms(sock)
+
+        except Exception as e: print(e)
 
 
 
