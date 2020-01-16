@@ -67,7 +67,6 @@ class GUI(server,Aud_Vid):
         self.Application_Window.title("WebChat")
         self.width = self.Application_Window.winfo_screenwidth()
         self.height = self.Application_Window.winfo_screenheight()
-        self.para = self.server.Incoming_request_address_array
         self.Application_Window.geometry('%dx%d+0+0' % (self.width,self.height))
         self.m3nu = tk.Menu(self.Application_Window)
         self.Application_Window.config(menu=self.m3nu)
@@ -87,7 +86,7 @@ class GUI(server,Aud_Vid):
         self.port_enter = tk.Entry(self.Application_Window)
         self.make_call_button =  tk.Button(self.Application_Window,text = 'make call' ,command = self.make_call)
         self.end_call_button =  tk.Button(self.Application_Window,text = 'end call' ,command = self.end_call)
-        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.lift_call(self.server.Incoming_request_socket))
+        self.lift_call_button =  tk.Button(self.Application_Window,text = 'lift_call' ,command = self.lift_call)
         self.ip_enter.grid(row=0, column=1)
         self.port_enter.grid(row=1, column=1)
         self.make_call_button.grid(row=3, column=1)
@@ -168,13 +167,13 @@ class GUI(server,Aud_Vid):
      try:
         while True:
            ser_data = b""
-           ser_len = client_socket.recv(16)
+           ser_len = sock.recv(16)
            length = pickle.loads(ser_len)
            while length > 0:
                if length < 4096:
-                   packet = client_socket.recv(length)
+                   packet = sock.recv(length)
                else:
-                   packet = client_socket.recv(4096)
+                   packet = sock.recv(4096)
 
                ser_data += packet
                length -= len(packet)
@@ -194,10 +193,10 @@ class GUI(server,Aud_Vid):
             except socket.timeout :
                 error_indicator = "call timed out"
 
-    def lift_call(self,sock):
+    def lift_call(self):
         try:
-            sock.sendall(b'alpha')
-            self.comms(sock)
+            self.server.Incoming_request_socket.sendall(b'alpha')
+            self.comms(self.server.Incoming_request_socket)
 
         except Exception as e: print(e)
 
