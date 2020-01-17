@@ -129,11 +129,10 @@ class GUI(server,Aud_Vid):
        print(ip)
        self.error_label.configure(text = ip_address)
        self.error_label.text = ip_address
-       with concurrent.futures.ThreadPoolExecutor() as executor:
-                signature = executor.submit(self.server.Local_Server_outgoing.recv,8)
-                result = signature.result()
-                if signature == b'alpha' :
-                    self.comms(self.server.Local_Server_outgoing)
+       signature = self.server.Local_Server_outgoing.recv(8)
+       if signature == b'alpha' :
+                    t = th.Thread(target = self.comms,args =(self.server.Local_Server_outgoing,))
+                    t.start()
 
 
 
@@ -153,9 +152,7 @@ class GUI(server,Aud_Vid):
 
     def send(self,sock):
       try:
-        while True:
            ser_data =pickle.dumps(self.avi.sync())
-           print(ser_data)
            length = pickle.dumps(len(ser_data))
            length = self.padding(length)
            sock.sendall(length)
@@ -165,10 +162,10 @@ class GUI(server,Aud_Vid):
 
     def recived(self,sock):
      try:
-        while True:
            ser_data = b""
            ser_len = sock.recv(16)
            length = pickle.loads(ser_len)
+           print(length)
            while length > 0:
                if length < 4096:
                    packet = sock.recv(length)
@@ -179,8 +176,11 @@ class GUI(server,Aud_Vid):
                length -= len(packet)
 
            data = pickle.loads(ser_data)
-           self.show_recv(data)
-     except Exception as e: print(e)
+           t1 = th.Thread(target= self.show_recv,args = (data,))
+           t1.start()
+     except Exception as e:
+         print(e)
+         print(ser_data)
 
     def comms(self,sock):
             try:
@@ -189,6 +189,7 @@ class GUI(server,Aud_Vid):
                         rec_v = executor.submit(self.recived,sock)
                         vid = send.result()
                         aud = rec_v.result()
+                self.lift_call_button.after(1,self.comms(sock))
 
             except socket.timeout :
                 error_indicator = "call timed out"
@@ -196,7 +197,8 @@ class GUI(server,Aud_Vid):
     def lift_call(self):
         try:
             self.server.Incoming_request_socket.sendall(b'alpha')
-            self.comms(self.server.Incoming_request_socket)
+            t = th.Thread(target = self.comms, args = (self.server.Incoming_request_socket,))
+            t.start()
 
         except Exception as e: print(e)
 
