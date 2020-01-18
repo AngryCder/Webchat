@@ -167,7 +167,6 @@ class GUI(server,Aud_Vid):
            ser_data = b""
            ser_len = sock.recv(16)
            length = pickle.loads(ser_len)
-           print(length)
            while length > 0:
                if length < 4096:
                    packet = sock.recv(length)
