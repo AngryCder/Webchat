@@ -1,5 +1,6 @@
 import socket
 import ssl
+import lzma
 import cv2
 from PIL import Image,ImageTk
 import pickle
@@ -16,6 +17,7 @@ class server():
         self.arg = arg
         self.Local_Server_incoming = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.Local_Server_outgoing = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.compresser = lmza.LZMACompressor()
         self.Incoming_request_socket = None
         self.Incoming_request_address = None
 
@@ -154,28 +156,30 @@ class GUI(server,Aud_Vid):
       try:
         while True:
            ser_data =pickle.dumps(self.avi.sync())
-           length = pickle.dumps(len(ser_data))
+           comp_data = self.server.compresser.compress(ser_data)
+           length = pickle.dumps(len(comp_data))
            length = self.padding(length)
            sock.sendall(length)
-           sock.sendall(ser_data)
+           sock.sendall(comp_data)
 
       except Exception as e: print(e)
 
     def recived(self,sock):
      try:
          while True:
-           ser_data = b""
+           comp_data = b""
            ser_len = sock.recv(16)
            length = pickle.loads(ser_len)
            while length > 0:
-               if length < 4096:
+               if length < 8192:
                    packet = sock.recv(length)
                else:
-                   packet = sock.recv(4096)
+                   packet = sock.recv(8192)
 
-               ser_data += packet
+               comp_data += packet
                length -= len(packet)
 
+           ser_data = self.server.compresser.decompress(comp_data)
            data = pickle.loads(ser_data)
            t1 = th.Thread(target= self.show_recv,args = (data,))
            t1.start()
