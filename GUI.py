@@ -152,6 +152,7 @@ class GUI(server,Aud_Vid):
 
     def send(self,sock):
       try:
+        while True:
            ser_data =pickle.dumps(self.avi.sync())
            length = pickle.dumps(len(ser_data))
            length = self.padding(length)
@@ -162,6 +163,7 @@ class GUI(server,Aud_Vid):
 
     def recived(self,sock):
      try:
+         while True:
            ser_data = b""
            ser_len = sock.recv(16)
            length = pickle.loads(ser_len)
