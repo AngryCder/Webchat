@@ -56,7 +56,7 @@ class Aud_Vid():
                   ta = executor.submit(self.instream.read,1470)
                   vid = tv.result()
                   aud = ta.result()
-                  return(vid[1],aud)
+                  return(vid[1].tobytes(),aud)
 
 
 
