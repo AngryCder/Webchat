@@ -1,6 +1,6 @@
 import socket
 import ssl
-import lzma
+import gzip
 import cv2
 from PIL import Image,ImageTk
 import pickle
@@ -17,7 +17,6 @@ class server():
         self.arg = arg
         self.Local_Server_incoming = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.Local_Server_outgoing = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.compresser = lmza.LZMACompressor()
         self.Incoming_request_socket = None
         self.Incoming_request_address = None
 
