@@ -55,7 +55,7 @@ class Aud_Vid():
                   ta = executor.submit(self.instream.read,1470)
                   vid = tv.result()
                   aud = ta.result()
-                  return(vid[1].tobytes(),aud)
+                  return gzip.compress(np.array[vid[1].tobytes(),aud].tobytes())
 
 
 
@@ -154,9 +154,8 @@ class GUI(server,Aud_Vid):
     def send(self,sock):
       try:
         while True:
-           ser_data =pickle.dumps(self.avi.sync())
-           comp_data = self.server.compresser.compress(ser_data)
-           length = pickle.dumps(len(comp_data))
+           comp_data =self.avi.sync()
+           length = bytes(len(comp_data))
            length = self.padding(length)
            sock.sendall(length)
            sock.sendall(comp_data)
@@ -168,7 +167,7 @@ class GUI(server,Aud_Vid):
          while True:
            comp_data = b""
            ser_len = sock.recv(16)
-           length = pickle.loads(ser_len)
+           length = int(ser_len)
            while length > 0:
                if length < 8192:
                    packet = sock.recv(length)
@@ -178,7 +177,7 @@ class GUI(server,Aud_Vid):
                comp_data += packet
                length -= len(packet)
 
-           ser_data = self.server.compresser.decompress(comp_data)
+           ser_data = gzip.decompress(comp_data)
            data = pickle.loads(ser_data)
            t1 = th.Thread(target= self.show_recv,args = (data,))
            t1.start()
