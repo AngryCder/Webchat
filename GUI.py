@@ -55,6 +55,7 @@ class Aud_Vid():
                   ta = executor.submit(self.instream.read,1470)
                   vid = tv.result()
                   aud = ta.result()
+                  dimensions  = vid.shape
                   return gzip.compress(np.array[vid[1].tobytes(),aud].tobytes())
 
 
